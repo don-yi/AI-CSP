@@ -1,0 +1,241 @@
+files:
+Makefile - used for 2 very basic online tests (0,1)
+Makefile-working - has many tests, you should this one 
+
+1) implement backtracking algorithm backtracking is similar to search, but it's
+a recursive algorithm: consider this
+  - search is iterative, and it keeps the "next" in an openlist
+  - backtracking is recursive and keeps "next" in the previous function stack
+
+    for variable ordering (which variable to assign next) implement Minimum Remaining Value 
+
+    once the variable is chosen, you'll need a value to assign. 
+    Use "Variable::Assign()" which chooses the first available value.
+
+2) implement forward checking (AIMA p.144):
+once you assign a variable (call it current variable), the assignment 
+may render some of the values of other variables impossible:
+
+Example: variables (x, domain {1,2,3,4,5}), (y, domain {1,2,3,4,5}), 
+         constraint x+y>7;
+x is current variable, and we assign value 5, then forward checking 
+will discover that y cannot be 1 and 2, since these two choices make x+y<=7,
+thus y's domain should be reduced (y, domain {3,4,5}). Remember that
+this is true ONLY FOR A PARTICULAR assignment of variable x - if x is assigned a
+different value, y's domain may change in a different way or not change at all.
+The moral is this: some of the changes to variable's domain may need to be
+reversed, therefore you need to save states of variables right before you 
+call ForwardCheck algorithm.
+
+3) implement arc-consistency AC-3 algorithm (AIMA p.146)
+
+main.cpp structure:
+
+main.cpp has several mains, use "#define" (see examples below)
+(or appropriate compiler switch) to choose one:
+
+EXAMPLE   - for testing and debugging
+
+QUEEN  - n-queen problem (see AIMA for definition), requires -D"SIZE=12" (12 - board size)
+
+MS       - magic square (see Wikipedia for definition)
+requires SIZE - the side of the square. 
+
+MSBC    - magic square problem, but instead of using a single AllDiff constraint
+uses a bunch of binary constraints (which usually makes CSP faster) 
+AllDiff(x1,x2,x3,x4) 
+	is equivalent to 
+AllDiff2(x1,x2)
+AllDiff2(x1,x3)
+AllDiff2(x1,x4)
+AllDiff2(x2,x3)
+AllDiff2(x2,x4)
+AllDiff2(x3,x4)
+requires SIZE - the side 
+
+--------------------------------------------
+choice of BackTracking, ForwardChecking, and ArcConsistency is done by 
+another "#define" (or appropriate compiler switch):
+DFS - BackTracking,
+FC  - ForwardChecking,
+ARC - ArcConsistency
+--------------------------------------------
+
+To submit:
+scp.h and scp.cpp
+
+you have to implement
+SolveDFS - Backtracking
+SolveFC  - ForwardChecking
+SolveARC - arc-consistency (this is an extra, so if you decide not to implement it, 
+just put "return false"
+
+Code:
+study Variable and Constraint classes, make sure you understand 
+how "Satisfiable" method works then ConstraintGraph - this is 
+like Graph in A* project, it contains all Variables and Constraints
+and also some data-structures that should simplify your implementation, 
+notice:
+		//data-structures to simplify life
+		//some are calculated during Insert operations
+		//the other in PreProcess - should be called before
+		//CSP::Solve !!!!!
+
+		//mapping from variable to constraints the variable is used in.
+		//that is constraints that depend on the variable
+		std::map<Variable*,std::vector<Constraint*> > var2constr;
+		//all variables
+		std::vector<Variable*> vars;
+		//all constraints
+		std::vector<Constraint*> constraints;//mainly for print
+		//mapping from variable x to a set of variables Z
+		//each z in Z is connected to x by a constraint
+		//that is: there is a constraint that uses both variables x and z 
+		std::map<Variable*, std::set<Variable*> > neighbors;
+		//for each pair of variables all constraints that use both of them
+		//used in consistency checking
+		std::map< std::pair<Variable*,Variable*>, 
+			std::set<Constraint*> > connecting_constraints;
+
+
+Overall code design:
+client creates variables and constraints (in main)
+all my classes work with 
+1) pointers to variables (so in the end those variables contain a solution )
+2) copies of constraints (to create a copy I use "clone" method - virtual constructor.
+
+CSP::Solve??? returns a boolean which  flags whether solution is found, solution itself 
+should be in clients Variables
+main: 
+1) it creates variables and constraints
+2) it calls Solve
+3) it looks at those variables for a solution
+
+OUTPUT
+one of many possible 4x4 magic squares
+1  2  15 16
+12 14 3  5
+13 7  10 4
+8  11 6  9
+one of several possible 3x3 magic squares
+2 7 6 
+9 5 1 
+4 3 8 
+
+Coding style:
+there are many containers and many iterators,
+some algorithms require you to implement something like
+"for all variables" {
+	"for all constraints" {
+		"for all values" {
+			......
+		}
+	}
+}
+
+which will look like ConstraintGraph::PreProcess() 
+take a look at that method -- make sure you understand it.
+1) a typical for-loop is
+typename std::vector<Variable*>::const_iterator b_vars = vars.begin();
+typename std::vector<Variable*>::const_iterator e_vars = vars.end();
+for ( ;b_vars!=e_vars;++b_vars) {
+	.....
+}
+which creates 2 iterators "b_vars" in initialized with begin() 
+and will be our loop variables (the one you increment)
+e_vars is initialized with end() and used in termination condition only.
+All iterator are either b_* or e_*. The part after underscore
+tells which container the iterator is traversing: vars, constrs, vals.
+
+2) many of the container you are traversing are allocated in ConstraintGraph 
+and returned by const reference. Say
+you call 
+const typename std::set<Variable*>& 
+GetNeighbors( Variable* p_var ) {
+	return neighbors[p_var];
+}
+
+if you code looks like 
+std::set<Variable*> neighbors = GetNeighbors(x);
+you'll create a copy of the neighbors vector, thus
+a) copying takes time 
+b) if you modify neighbors, you modify the local variable only.
+
+In most (but not all) situations you'll be traversing but not modifying, thus
+const std::set<Variable*>& neighbors = GetNeighbors(x);
+will be enough (notice "&" and "const"), you'll also need "const_iterator"
+
+3) what if you want to traverse and modify at the same time (all Solve*)
+function need this - they'll be traversing available values for each variable 
+and delete those values that cause constraint violation. Here 2 ways of doing that:
+A) create a copy (see 1)) and traverse the copy using iterators, 
+when delete is required - delete from the original.
+B) some situations (like std::set and my class Variable) allow a different 
+(from my point of view cleaner) solution:
+
+in the case of set:
+==================
+while ( !myset.empty() ) {
+	s = set.front();
+	if (...) erase( myset.begin() );
+}
+
+Variable
+========
+my Variable has 2 very useful methods, Assign() - assigns first available value
+and UnAssign(), which allow looping through all available values:
+
+//somewhere in Solve*
+.....
+//var_to_assign is the current variable (you choose it using MRV)
+Variable* variable = MinRemVal();
+........
+........
+while ( ..... &&  !var_to_assign->IsImpossible() ) { //Impossible = empty available values set
+	var_to_assign->Assign();
+	....
+	if (....)  {
+		var_to_assign->RemoveValue( var_to_assign->GetValue() ); //deletes from the original 
+		var_to_assign->UnAssign();
+		....
+	}
+}
+
+
+To count the number of recursive calls I added to CSP class:
+//get the number of recursive calls - for debugging
+int GetRecursiveCallCounter() const { return recursive_call_counter; }
+//get the number of variable assigns in Solve* - for debugging
+int GetIterationCounter() const { return iteration_counter; }
+
+corresponding variables recursive_call_counter and iteration_counter
+should be modified in Solve??? methods
+bool Solve... (...) {
+	++recursive_call_counter;
+	...
+	while (....)  {
+		++iteration_counter;
+		...
+	}
+	...
+}
+
++---------------+------------+------------------+-------+
+|               | rec calls  | while iterations | time  |
++---------------+------------+------------------+-------+
+| ms5-arc       |    382     |   1169           | 3.23  |
+| ms5-fc        |    4977    |   9922           | 1.09  |
+| msbc5-arc     |    363     |   1157           | 0.59  |
+| msbc5-fc      |    4358    |   8531           | 0.29  |
+| msbc6-fc      |    461165  |   949251         | 46.36 |
+| queen-28-dfs  |    3006299 |   84175966       | 44.56 |
+| queen-100-fc  |    164     |   185            | 0.11  |
+| queen-100-arc |    123     |   143            | 8.59  |
++---------------+------------+------------------+-------+
+
+Makefile:
+when using GNU use 
+   make queen-100-fc
+
+when using MicroSoft
+   make msc-queen-100-fc

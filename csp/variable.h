@@ -97,6 +97,6 @@ std::ostream& operator<<(std::ostream& os, const Variable& v);
 	#include "variable.inl"
 #endif
 
-#include "variable.cpp"
+//#include "variable.cpp"
 
 #endif

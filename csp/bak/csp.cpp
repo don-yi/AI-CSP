@@ -20,10 +20,20 @@ CSP<T>::CSP(T &cg) :
 {
 }
 
+template<typename T>
+bool CSP<T>::SolveFC_count(unsigned level) {
+	return false;
+}
+
 ////////////////////////////////////////////////////////////
 //CSP solver, brute force - no forward checking
 template <typename T> 
 bool CSP<T>::SolveDFS(unsigned level) {
+
+	// todo: place holder
+	return false;
+
+
 	++recursive_call_counter;
 	//std::cout << "entering SolveDFS (level " << level << ")\n";
 
@@ -39,12 +49,12 @@ bool CSP<T>::SolveDFS(unsigned level) {
 
 
 
-    loop( ... ) {
-        ++iteration_counter;
+    //loop( ... ) {
+    //    ++iteration_counter;
 
 
 
-    }
+    //}
 
 
 
@@ -55,6 +65,11 @@ bool CSP<T>::SolveDFS(unsigned level) {
 //CSP solver, uses forward checking
 template <typename T> 
 bool CSP<T>::SolveFC(unsigned level) {
+
+	// todo: place holder
+	return false;
+
+
 	++recursive_call_counter;
 	//std::cout << "entering SolveFC (level " << level << ")\n";
 
@@ -66,12 +81,12 @@ bool CSP<T>::SolveFC(unsigned level) {
 
 	
 
-    loop( ... ) {
-        ++iteration_counter;
+    //loop( ... ) {
+    //    ++iteration_counter;
 
 
 
-    }
+    //}
 
 
 
@@ -80,6 +95,11 @@ bool CSP<T>::SolveFC(unsigned level) {
 //CSP solver, uses arc consistency
 template <typename T> 
 bool CSP<T>::SolveARC(unsigned level) {
+
+	// todo: place holder
+	return false;
+
+
 	++recursive_call_counter;
 	//std::cout << "entering SolveARC (level " << level << ")\n";
 
@@ -94,12 +114,12 @@ bool CSP<T>::SolveARC(unsigned level) {
     
 	
     
-    loop( ... ) {
-        ++iteration_counter;
+    //loop( ... ) {
+    //    ++iteration_counter;
 
 
 
-    }
+    //}
 
 
 
@@ -109,6 +129,11 @@ bool CSP<T>::SolveARC(unsigned level) {
 template <typename T> 
 INLINE
 bool CSP<T>::ForwardChecking(Variable *x) {
+
+	// todo: place holder
+	return false;
+
+
 
 
 
@@ -163,6 +188,11 @@ template <typename T>
 INLINE
 bool CSP<T>::AssignmentIsConsistent( Variable* p_var ) const {
 
+	// todo: place holder
+	return false;
+
+
+
 
 
 
@@ -202,6 +232,11 @@ template <typename T>
 INLINE
 bool CSP<T>::CheckArcConsistency(Variable* x) {
 
+	// todo: place holder
+	return false;
+
+
+
 
 
 
@@ -220,6 +255,11 @@ bool CSP<T>::CheckArcConsistency(Variable* x) {
 template <typename T> 
 INLINE
 bool CSP<T>::RemoveInconsistentValues(Variable* x,Variable* y,const Constraint* c) {
+
+	// todo: place holder
+	return false;
+
+
 
 
 

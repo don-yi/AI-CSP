@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cmath>
 #include <cstdlib>
+#include <set>
 
 #ifdef INLINE_CONSTRAINT
 	//#warning "INFO - inlining Constraint methods"

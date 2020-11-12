@@ -88,7 +88,6 @@ class CSP {
 		//choose the one with max degree
 		Variable* MaxDegreeHeuristic();
 
-
 		//data
 		//deque of arcs (2 Variables connected through a Constraint)
 		std::set< Arc<Constraint> > arc_consistency;
@@ -126,34 +125,48 @@ bool CSP<T>::SolveFC_count(unsigned level) {
 template <typename T> 
 bool CSP<T>::SolveDFS(unsigned level) {
 
-	// todo: place holder
-	return false;
-
-
+	// update rec call ct
 	++recursive_call_counter;
-	//std::cout << "entering SolveDFS (level " << level << ")\n";
+	std::cout << "entering SolveDFS (level " << level << ")\n";
 
+	// ending cond
+	if (cg.AllVariablesAssigned()) {
+    // TODO: print value of each varible;
+		return true;
+	}
 
+  // get var w/ mrv
+  Variable* var_to_assign = MinRemVal();
 
+	for (auto& i : var_to_assign->GetDomain()) {
+		// init's
+		var_to_assign->Assign(i);
+		var_to_assign->RemoveValue(i);
+		bool isSatisfied = true;
 
+    //  for each constraint c such that v is a variable of c
+    //            and all other variables of c
+    //            are assigned.
+		for (auto& constr : cg.GetConstraints(var_to_assign)) {
+      ++iteration_counter;
 
-    //choose a variable by MRV
-	Variable* var_to_assign = MinRemVal();
-	//Variable* var_to_assign = MaxDegreeHeuristic();
+			// check every constr's are satisfied
+			if (not constr->Satisfiable()) {
+				isSatisfied = false;
+				break;
+			}
+		}
 
+		// if satisfied, one more down tree
+		if (isSatisfied)
+      SolveDFS(level + 1);
 
+		// otherwise, unassign and try new val in domain
+		var_to_assign->UnAssign();
+	}
 
-
-
-    //loop( ... ) {
-    //    ++iteration_counter;
-
-
-
-    //}
-
-
-
+	// no sol cond
+	return false;
 }
 
 
@@ -248,7 +261,7 @@ void CSP<T>::LoadState(
 		e_result = saved.end();
 
 	for ( ; b_result != e_result; ++b_result ) {
-		//std::cout << "loading state for " 
+		//std::cout << "loading state for " /cg
 		//<< b_result->first->Name() << std::endl;
 		(*b_result).first->SetDomain( (*b_result).second );
 	}
@@ -375,20 +388,22 @@ bool CSP<T>::RemoveInconsistentValues(Variable* x,Variable* y,const Constraint* 
 template <typename T> 
 INLINE
 typename CSP<T>::Variable* CSP<T>::MinRemVal() {
+	const typename std::vector<Variable*> vars = cg.GetAllVariables();
+	typename std::vector<Variable*>::const_iterator b_vars = vars.begin();
+	typename std::vector<Variable*>::const_iterator e_vars = vars.end();
+	typename std::vector<Variable*>::const_iterator mrv = e_vars;
+	for (; b_vars != e_vars; ++b_vars) {
+		if ((*b_vars)->IsAssigned())
+			continue;
 
-	// todo: place holder
-	return {};
+		if (mrv == e_vars)
+      mrv = b_vars;
 
+    if ((*b_vars)->SizeDomain() < (*mrv)->SizeDomain())
+      mrv = b_vars;
+	}
 
-
-
-
-
-
-
-
-
-
+	return *mrv;
 }
 ////////////////////////////////////////////////////////////
 //choose next variable for assignment
@@ -415,6 +430,7 @@ typename CSP<T>::Variable* CSP<T>::MaxDegreeHeuristic() {
 
 
 }
+
 #undef INLINE
 
 #endif

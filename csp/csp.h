@@ -124,50 +124,90 @@ bool CSP<T>::SolveFC_count(unsigned level) {
 //CSP solver, brute force - no forward checking
 template <typename T> 
 bool CSP<T>::SolveDFS(unsigned level) {
+  // debugging purpose
+  bool const isDebugOn = false;
 
-	// update rec call ct
-	++recursive_call_counter;
-	std::cout << "entering SolveDFS (level " << level << ")\n";
+  // update rec call ct
+  ++recursive_call_counter;
+  if (isDebugOn)
+    std::cout << "entering SolveDFS (level " << level << ")\n";
 
-	// ending cond
-	if (cg.AllVariablesAssigned()) {
-    // TODO: print value of each varible;
-		return true;
-	}
+  // true ending cond
+  if (cg.AllVariablesAssigned()) {
+    if (isDebugOn)
+      std::cout << "\n" << "all as'ed, exiting lvl " << level <<"\n";
+    return true;
+  }
 
-  // get var w/ mrv
   Variable* var_to_assign = MinRemVal();
 
-	for (auto& i : var_to_assign->GetDomain()) {
-		// init's
+
+  //// TODO: what to do w/ this?
+  //var_to_assign->RemoveValue(i);
+
+  //// bad ending cond
+  //if (var_to_assign->IsImpossible())
+  //  return false;
+
+
+  // get var w/ mrv
+  std::set<Value> domain = var_to_assign->GetDomain();
+
+	for (auto& i : domain) {
+
+		//// init's
 		var_to_assign->Assign(i);
-		var_to_assign->RemoveValue(i);
+
+		if (isDebugOn)
+			std::cout << "trying assigning, "
+			<< var_to_assign->Name() << ": " << i << "\n";
+
 		bool isSatisfied = true;
 
-    //  for each constraint c such that v is a variable of c
-    //            and all other variables of c
-    //            are assigned.
+
+		//  for each constraint c such that v is a variable of c
+		//            and all other variables of c
+		//            are assigned.
 		for (auto& constr : cg.GetConstraints(var_to_assign)) {
-      ++iteration_counter;
+			++iteration_counter;
 
 			// check every constr's are satisfied
 			if (not constr->Satisfiable()) {
 				isSatisfied = false;
 				break;
 			}
-		}
+    }
 
-		// if satisfied, one more down tree
-		if (isSatisfied)
+		if (isSatisfied) {
+      // down br
+      if (isDebugOn)
+        std::cout << " satisfied, one more down br " << "\n" << "\n";
+
       SolveDFS(level + 1);
 
-		// otherwise, unassign and try new val in domain
-		var_to_assign->UnAssign();
-	}
+      if (isDebugOn)
+        std::cout << "\n";
 
-	// no sol cond
-	return false;
+			// true ending, get out of fn frame
+			if (cg.AllVariablesAssigned())
+				break;
+		}
+    // otherwise, unassign and try new val in domain
+		else {
+			if (isDebugOn) {
+				//std::cout << " Unsatisfied, unassigning "
+				//	<< var_to_assign->Name() << ": "
+				//	<< var_to_assign->GetValue() << "\n" << "\n";
+			}
+      var_to_assign->UnAssign();
+		}
+  }
+
+  if (isDebugOn)
+    std::cout << "exiting SolveDFS (level " << level << ")\n";
 }
+
+
 
 
 ////////////////////////////////////////////////////////////

@@ -159,9 +159,9 @@ int (*pTests[])() = { test0,test1 };
 //<test>  -- run predefined test, see above
 //-100  <queen board size> <algorithm> <what to test>
 int main (int argc, char ** argv) try {
-    if (argc >1) {
+    if (true) {
         int test = 0; 
-        std::sscanf(argv[1],"%i",&test); 
+        //std::sscanf(argv[1],"%i",&test); 
 
         pTests[test]();
         return 0; 

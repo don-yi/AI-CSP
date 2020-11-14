@@ -132,15 +132,14 @@ bool CSP<T>::SolveDFS(unsigned level) {
   if (isDebugOn)
     std::cout << "entering SolveDFS (level " << level << ")\n";
 
-  // true ending cond
+  // true ending, ret b4 deeper lvl
   if (cg.AllVariablesAssigned()) {
     if (isDebugOn)
-      std::cout << "\n" << "all as'ed, exiting lvl " << level <<"\n";
+      std::cout << "exiting SolveDFS (level " << level << ")\n";
     return true;
   }
 
   Variable* var_to_assign = MinRemVal();
-
 
   //// TODO: what to do w/ this?
   //var_to_assign->RemoveValue(i);
@@ -151,16 +150,22 @@ bool CSP<T>::SolveDFS(unsigned level) {
 
 
   // get var w/ mrv
-  std::set<Value> domain = var_to_assign->GetDomain();
+  std::set<typename Variable::Value> const& domain = var_to_assign->GetDomain();
 
-	for (auto& i : domain) {
+  for (
+    typename std::set<typename Variable::Value>::const_iterator i = domain.begin();
+    i != domain.end();
+    ++i
+    ) {
+
+    ++iteration_counter;
 
 		//// init's
-		var_to_assign->Assign(i);
+		var_to_assign->Assign(*i);
 
 		if (isDebugOn)
 			std::cout << "trying assigning, "
-			<< var_to_assign->Name() << ": " << i << "\n";
+			<< var_to_assign->Name() << ": " << *i << "\n";
 
 		bool isSatisfied = true;
 
@@ -169,8 +174,6 @@ bool CSP<T>::SolveDFS(unsigned level) {
 		//            and all other variables of c
 		//            are assigned.
 		for (auto& constr : cg.GetConstraints(var_to_assign)) {
-			++iteration_counter;
-
 			// check every constr's are satisfied
 			if (not constr->Satisfiable()) {
 				isSatisfied = false;
@@ -183,28 +186,26 @@ bool CSP<T>::SolveDFS(unsigned level) {
       if (isDebugOn)
         std::cout << " satisfied, one more down br " << "\n" << "\n";
 
-      SolveDFS(level + 1);
+			if (SolveDFS(level + 1))
+				return true;
 
       if (isDebugOn)
         std::cout << "\n";
+		}
 
-			// true ending, get out of fn frame
-			if (cg.AllVariablesAssigned())
-				break;
-		}
     // otherwise, unassign and try new val in domain
-		else {
-			if (isDebugOn) {
-				//std::cout << " Unsatisfied, unassigning "
-				//	<< var_to_assign->Name() << ": "
-				//	<< var_to_assign->GetValue() << "\n" << "\n";
-			}
-      var_to_assign->UnAssign();
-		}
+    if (isDebugOn) {
+      std::cout << " Unsatisfied, unassigning "
+        << var_to_assign->Name() << ": "
+        << var_to_assign->GetValue() << "\n" << "\n";
+    }
+    var_to_assign->UnAssign();
   }
 
   if (isDebugOn)
     std::cout << "exiting SolveDFS (level " << level << ")\n";
+
+	return false;
 }
 
 

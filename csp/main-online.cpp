@@ -160,7 +160,7 @@ int (*pTests[])() = { test0,test1 };
 //-100  <queen board size> <algorithm> <what to test>
 int main (int argc, char ** argv) try {
     if (true) {
-        int test = 0; 
+        int test = 1; 
         //std::sscanf(argv[1],"%i",&test); 
 
         pTests[test]();

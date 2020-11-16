@@ -89,7 +89,7 @@ class CSP {
 		Variable* MaxDegreeHeuristic();
 
 		// deep cp dom for mod'ing orig dom
-		std::set<typename Variable::Value>* const CpDomFromVar(Variable* var);
+		std::set<typename Variable::Value>* CpDomFromVar(Variable* var);
 
 		//data
 		//deque of arcs (2 Variables connected through a Constraint)
@@ -128,7 +128,7 @@ bool CSP<T>::SolveFC_count(unsigned level) {
 template <typename T> 
 bool CSP<T>::SolveDFS(unsigned level) {
   // debugging purpose
-  bool const isDebugOn = true;
+  bool const isDebugOn = false;
 
   // update rec call ct
   ++recursive_call_counter;
@@ -341,32 +341,9 @@ bool CSP<T>::SolveFC(unsigned level) {
 template <typename T> 
 bool CSP<T>::SolveARC(unsigned level) {
 
-	// todo: place holder
+	// TODO: place holder
+	(void)level;
 	return false;
-
-
-	++recursive_call_counter;
-	//std::cout << "entering SolveARC (level " << level << ")\n";
-
-	
-    
-    
-    
-    //choose a variable by MRV
-	Variable* var_to_assign = MinRemVal();
-
-    
-    
-	
-    
-    //loop( ... ) {
-    //    ++iteration_counter;
-
-
-
-    //}
-
-
 
 }
 
@@ -568,8 +545,9 @@ typename CSP<T>::Variable* CSP<T>::MaxDegreeHeuristic() {
 }
 
 template<typename T>
-inline std::set<typename CSP<T>::Variable::Value>* const
-CSP<T>::CpDomFromVar(CSP<T>::Variable* var) {
+inline std::set<typename CSP<T>::Variable::Value>* CSP<T>::CpDomFromVar(
+	CSP<T>::Variable* var
+	) {
 
 	std::set<typename Variable::Value> const& orig = var->GetDomain();
 	typename std::set<typename Variable::Value>::const_iterator b_dom

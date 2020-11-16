@@ -304,8 +304,6 @@ bool CSP<T>::SolveFC(unsigned level) {
       if ((*neiItr)->IsImpossible()) {
 				// has no future w/ val assignment
 				hasPossibleFuture = false;
-				// load state and break out to try diff var to assign
-        LoadState(savedState);
         break;
       }
     }
@@ -322,13 +320,15 @@ bool CSP<T>::SolveFC(unsigned level) {
         std::cout << "\n";
     }
 
-    // otherwise, unassign and try nxt val in domain
+    // otherwise, unassign and try nxt val in domain w/ orig state
     if (isDebugOn) {
       std::cout << "      unsatisfied, unassigning "
         << var_to_assign->Name() << ": "
         << var_to_assign->GetValue() << "\n" << "\n";
     }
     var_to_assign->UnAssign();
+    // load state and break out to try diff var to assign
+    LoadState(savedState);
   }
 
   // bad ending

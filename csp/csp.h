@@ -88,6 +88,9 @@ class CSP {
 		//choose the one with max degree
 		Variable* MaxDegreeHeuristic();
 
+		// deep cp dom for mod'ing orig dom
+		std::set<typename Variable::Value>* const CpDomFromVar(Variable* var);
+
 		//data
 		//deque of arcs (2 Variables connected through a Constraint)
 		std::set< Arc<Constraint> > arc_consistency;
@@ -125,14 +128,15 @@ bool CSP<T>::SolveFC_count(unsigned level) {
 template <typename T> 
 bool CSP<T>::SolveDFS(unsigned level) {
   // debugging purpose
-  bool const isDebugOn = false;
+  bool const isDebugOn = true;
 
   // update rec call ct
   ++recursive_call_counter;
+
   if (isDebugOn)
     std::cout << "entering SolveDFS (level " << level << ")\n";
 
-  // true ending, ret b4 deeper lvl
+  // true ending
   if (cg.AllVariablesAssigned()) {
     if (isDebugOn)
       std::cout << "exiting SolveDFS (level " << level << ")\n";
@@ -141,19 +145,13 @@ bool CSP<T>::SolveDFS(unsigned level) {
 
   Variable* var_to_assign = MinRemVal();
 
-  //// TODO: what to do w/ this?
-  //var_to_assign->RemoveValue(i);
-
-  //// bad ending cond
-  //if (var_to_assign->IsImpossible())
-  //  return false;
-
-
   // get var w/ mrv
   std::set<typename Variable::Value> const& domain = var_to_assign->GetDomain();
 
+	// for each val in domain
   for (
-    typename std::set<typename Variable::Value>::const_iterator i = domain.begin();
+    typename std::set<typename Variable::Value>::const_iterator i
+    = domain.begin();
     i != domain.end();
     ++i
     ) {
@@ -162,7 +160,6 @@ bool CSP<T>::SolveDFS(unsigned level) {
 
 		//// init's
 		var_to_assign->Assign(*i);
-
 		if (isDebugOn)
 			std::cout << "trying assigning, "
 			<< var_to_assign->Name() << ": " << *i << "\n";
@@ -181,24 +178,21 @@ bool CSP<T>::SolveDFS(unsigned level) {
 			}
     }
 
+    // if satis'ed, rec to nxt lvl
 		if (isSatisfied) {
-      // down br
       if (isDebugOn)
         std::cout << " satisfied, one more down br " << "\n" << "\n";
-
 			if (SolveDFS(level + 1))
 				return true;
-
       if (isDebugOn)
         std::cout << "\n";
 		}
 
-    // otherwise, unassign and try new val in domain
-    if (isDebugOn) {
+    // otherwise, unassign and try nxt val in domain
+    if (isDebugOn)
       std::cout << " Unsatisfied, unassigning "
-        << var_to_assign->Name() << ": "
-        << var_to_assign->GetValue() << "\n" << "\n";
-    }
+      << var_to_assign->Name() << ": "
+      << var_to_assign->GetValue() << "\n" << "\n";
     var_to_assign->UnAssign();
   }
 
@@ -207,39 +201,140 @@ bool CSP<T>::SolveDFS(unsigned level) {
 
 	return false;
 }
-
-
-
-
 ////////////////////////////////////////////////////////////
 //CSP solver, uses forward checking
 template <typename T> 
 bool CSP<T>::SolveFC(unsigned level) {
+  // debugging purpose
+  bool const isDebugOn = false;
 
-	// todo: place holder
-	return false;
+  // update rec call ct
+  ++recursive_call_counter;
 
+  if (isDebugOn)
+    std::cout << "entering SolveFC (level " << level << ")\n";
 
-	++recursive_call_counter;
-	//std::cout << "entering SolveFC (level " << level << ")\n";
+  // true ending
+  if (cg.AllVariablesAssigned()) {
+    if (isDebugOn)
+      std::cout << "exiting SolveFC (level " << level << ")\n";
+    return true;
+  }
 
-	
-    
-    //choose a variable by MRV
-	Variable* var_to_assign = MinRemVal();
-	//Variable* var_to_assign = MaxDegreeHeuristic();
+  // get next var to assign
+  Variable* var_to_assign = MinRemVal();
 
-	
+  // save state of all unassigned var's except curr
+  std::map<
+    typename CSP<T>::Variable*, std::set<typename CSP<T>::Variable::Value>
+  > savedState = SaveState(var_to_assign);
 
-    //loop( ... ) {
-    //    ++iteration_counter;
+  // for each val in domain
+  std::set<typename Variable::Value> const& domain1
+    = var_to_assign->GetDomain();
+  for (
+    typename std::set<typename Variable::Value>::const_iterator domItr1
+    = domain1.begin();
+    domItr1 != domain1.end();
+    ++domItr1
+    ) {
 
+		++iteration_counter;
 
+		//// init's
+		bool hasPossibleFuture = true;
 
-    //}
+    if (isDebugOn)
+      std::cout << "trying assigning, "
+      << var_to_assign->Name() << ": " << *domItr1 << "\n";
+    var_to_assign->Assign(*domItr1);
 
+    // for each neighboring var's
+    std::set<Variable*> const& neighbors = cg.GetNeighbors(var_to_assign);
+    for (
+      typename std::set<Variable*>::const_iterator neiItr = neighbors.begin();
+      neiItr != neighbors.end();
+      ++neiItr
+      ) {
 
+      // skip assigned var's
+      if ((*neiItr)->IsAssigned())
+        continue;
 
+      // for each val in domain of neighbor
+      std::set<typename Variable::Value> const* const domain2
+				= CpDomFromVar(*neiItr);
+      for (
+        typename std::set<typename Variable::Value>::const_iterator domItr2
+        = domain2->begin();
+        domItr2 != domain2->end();
+        ++domItr2
+        ) {
+
+        // assign neighbor to test constr's
+        (*neiItr)->Assign(*domItr2);
+
+        // for each connected constr
+        const std::set<const Constraint*>& constr
+          = cg.GetConnectingConstraints(var_to_assign, *neiItr);
+        for (
+          typename std::set<const Constraint*>::const_iterator constrItr
+          = constr.begin();
+          constrItr != constr.end();
+          ++constrItr
+          ) {
+
+          if (not (*constrItr)->Satisfiable()) {
+            // non-satis cond, rm val from dom
+            if (isDebugOn)
+              std::cout << "  unsatisfied, rm'ing val from neighbor "
+              << (*neiItr)->Name() << ": " << *domItr2 << "\n";
+            (*neiItr)->RemoveValue(*domItr2);
+            break;
+          }
+        }
+
+        // val tested, so unassign
+        (*neiItr)->UnAssign();
+      }
+
+			delete domain2;
+
+			// var w/o domain, no possible future
+      if ((*neiItr)->IsImpossible()) {
+				// has no future w/ val assignment
+				hasPossibleFuture = false;
+				// load state and break out to try diff var to assign
+        LoadState(savedState);
+        break;
+      }
+    }
+
+    // if assignment has possible future, rec to nxt lvl
+    if (hasPossibleFuture) {
+      if (isDebugOn)
+        std::cout << "    has possible future, to nxt lvl w/ "
+        << var_to_assign->Name() << ": " << var_to_assign->GetValue()
+        << "\n" << "\n";
+      if (SolveFC(level + 1))
+        return true;
+      if (isDebugOn)
+        std::cout << "\n";
+    }
+
+    // otherwise, unassign and try nxt val in domain
+    if (isDebugOn) {
+      std::cout << "      unsatisfied, unassigning "
+        << var_to_assign->Name() << ": "
+        << var_to_assign->GetValue() << "\n" << "\n";
+    }
+    var_to_assign->UnAssign();
+  }
+
+  // bad ending
+  if (isDebugOn)
+    std::cout << "exiting SolveFC (level " << level << ")\n";
+  return false;
 }
 ////////////////////////////////////////////////////////////
 //CSP solver, uses arc consistency
@@ -470,6 +565,23 @@ typename CSP<T>::Variable* CSP<T>::MaxDegreeHeuristic() {
 
 
 
+}
+
+template<typename T>
+inline std::set<typename CSP<T>::Variable::Value>* const
+CSP<T>::CpDomFromVar(CSP<T>::Variable* var) {
+
+	std::set<typename Variable::Value> const& orig = var->GetDomain();
+	typename std::set<typename Variable::Value>::const_iterator b_dom
+		= orig.begin();
+	typename std::set<typename Variable::Value>::const_iterator e_dom
+		= orig.end();
+	std::set<typename CSP<T>::Variable::Value>* const cp
+    = new std::set<typename CSP<T>::Variable::Value>;
+	for (; b_dom != e_dom; ++b_dom) 
+		cp->insert(*b_dom);
+
+	return cp;
 }
 
 #undef INLINE
